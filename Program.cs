@@ -38,13 +38,14 @@ var fetchAttackSpeedTask = Task.Run(async () =>
 
                 attackSpeed = player.championStats.attackSpeed;
             }
+
+            await Task.Delay(500);
         }
         catch (Exception ex)
         {
             Console.WriteLine("EXCEPTION: " + ex.Message);
+            await Task.Delay(5000);
         }
-
-        await Task.Delay(1000);
     }
 });
 
@@ -65,7 +66,7 @@ while (true)
     {
         lastAttack = DateTime.Now;
         sim.Keyboard.KeyPress(VirtualKeyCode.VK_X);
-        sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
+        //sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
 
         var windup = (int)Math.Ceiling(Math.Max(150, attackCooldown * 0.33));
         await Task.Delay(windup);
@@ -78,7 +79,7 @@ while (true)
     {
         lastMove = DateTime.Now;
         sim.Mouse.RightButtonClick();
-        sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
+        //sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
 
         var postDelay = (int)Math.Ceiling(Math.Max(50, attackCooldown * 0.15));
         await Task.Delay(postDelay);

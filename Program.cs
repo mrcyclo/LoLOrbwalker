@@ -9,6 +9,7 @@ var isSpaceHeld = false;
 var attackSpeed = 1d;
 var sim = new InputSimulator();
 var lastAttack = DateTime.Now;
+var lastMove = DateTime.Now;
 
 var fetchAttackSpeedTask = Task.Run(async () =>
 {
@@ -56,24 +57,24 @@ while (true)
         continue;
     }
 
-    var attackSlow = 1000 / Math.Max(attackSpeed, 0.1);
-    var minDelay = attackSlow * 0.95;
-    var attackDiff = (DateTime.Now - lastAttack).TotalMilliseconds;
-    if (attackDiff < minDelay)
+    var attackCooldown = 1000 / Math.Max(attackSpeed, 0.1);
+    var windup = (int)Math.Ceiling(Math.Max(150, attackCooldown * 0.33));
+
+    var isAttackable = (DateTime.Now - lastAttack).TotalMilliseconds >= attackCooldown;
+    if (isAttackable)
     {
-        await Task.Delay(5);
-        continue;
+        lastAttack = DateTime.Now;
+        sim.Keyboard.KeyPress(VirtualKeyCode.VK_X);
+        await Task.Delay(windup);
     }
 
-    lastAttack = DateTime.Now;
-    sim.Keyboard.KeyPress(VirtualKeyCode.VK_X);
-    sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
+    var isMovable = (DateTime.Now - lastMove).TotalMilliseconds >= 500;
+    if (isMovable)
+    {
+        lastMove = DateTime.Now;
+        sim.Mouse.RightButtonClick();
+        await Task.Delay(windup);
+    }
 
-    var windup = (int)Math.Ceiling(Math.Max(150, attackSlow * 0.33));
-    await Task.Delay(windup);
-    sim.Mouse.RightButtonClick();
-
-    var postDelay = (int)Math.Ceiling(Math.Max(50, attackSlow * 0.15));
-    var remaining = (int)Math.Ceiling(Math.Max(50, attackSlow - windup + postDelay));
-    await Task.Delay(remaining);
+    await Task.Delay(10);
 }

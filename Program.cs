@@ -58,22 +58,30 @@ while (true)
     }
 
     var attackCooldown = 1000 / Math.Max(attackSpeed, 0.1);
-    var windup = (int)Math.Ceiling(Math.Max(150, attackCooldown * 0.33));
+    var moveCooldown = Math.Min(200, attackCooldown);
 
-    var isAttackable = (DateTime.Now - lastAttack).TotalMilliseconds >= attackCooldown;
+    var isAttackable = (DateTime.Now - lastAttack).TotalMilliseconds >= attackCooldown * 1.1;
     if (isAttackable)
     {
         lastAttack = DateTime.Now;
         sim.Keyboard.KeyPress(VirtualKeyCode.VK_X);
+        sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
+
+        var windup = (int)Math.Ceiling(Math.Max(150, attackCooldown * 0.33));
         await Task.Delay(windup);
+
+        moveCooldown -= windup;
     }
 
-    var isMovable = (DateTime.Now - lastMove).TotalMilliseconds >= 500;
+    var isMovable = (DateTime.Now - lastMove).TotalMilliseconds >= moveCooldown;
     if (isMovable)
     {
         lastMove = DateTime.Now;
         sim.Mouse.RightButtonClick();
-        await Task.Delay(windup);
+        sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
+
+        var postDelay = (int)Math.Ceiling(Math.Max(50, attackCooldown * 0.15));
+        await Task.Delay(postDelay);
     }
 
     await Task.Delay(10);

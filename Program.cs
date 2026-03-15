@@ -1,15 +1,34 @@
 ﻿using LoLOrbwalker;
+using System.IO.Ports;
 using System.Net.Http.Json;
-using System.Timers;
+using System.Text;
 using WindowsInput;
 using WindowsInput.Native;
 using static Vanara.PInvoke.User32;
 
 var isSpaceHeld = false;
+var isGameActive = false;
 var attackSpeed = 1d;
 var sim = new InputSimulator();
 var lastAttack = DateTime.Now;
 var lastMove = DateTime.Now;
+
+//var serialPort = new System.IO.Ports.SerialPort("COM9", 115200)
+//{
+//    NewLine = "\n"
+//};
+
+//try
+//{
+//    serialPort.Open();
+//}
+//catch (Exception ex)
+//{
+//    Console.WriteLine($"EXCEPTION: {ex.Message}");
+//    Console.WriteLine("Press Enter to exit...");
+//    Console.ReadLine();
+//    Environment.Exit(0);
+//}
 
 var fetchAttackSpeedTask = Task.Run(async () =>
 {
@@ -49,26 +68,42 @@ var fetchAttackSpeedTask = Task.Run(async () =>
     }
 });
 
+var gameActiveCheckTask = Task.Run(async () =>
+{
+    var bufferLength = 256;
+    var buffer = new StringBuilder(bufferLength);
+
+    while (true)
+    {
+        buffer.Clear();
+        GetWindowText(GetForegroundWindow(), buffer, bufferLength);
+        isGameActive = buffer.ToString() == "League of Legends (TM) Client";
+
+        await Task.Delay(1000);
+    }
+});
+
 while (true)
 {
     isSpaceHeld = (GetAsyncKeyState(VK.VK_SPACE) & 0x8000) != 0;
-    if (!isSpaceHeld)
+    if (!isSpaceHeld || !isGameActive)
     {
         await Task.Delay(10);
         continue;
     }
 
     var attackCooldown = 1000 / Math.Max(attackSpeed, 0.1);
-    var moveCooldown = Math.Min(200, attackCooldown);
+    var moveCooldown = Math.Min(100, attackCooldown);
 
-    var isAttackable = (DateTime.Now - lastAttack).TotalMilliseconds >= attackCooldown * 1.1;
+    var isAttackable = (DateTime.Now - lastAttack).TotalMilliseconds >= attackCooldown;
     if (isAttackable)
     {
         lastAttack = DateTime.Now;
         sim.Keyboard.KeyPress(VirtualKeyCode.VK_X);
-        //sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
+        //serialPort.WriteLine("key:x");
 
-        var windup = (int)Math.Ceiling(Math.Max(150, attackCooldown * 0.33));
+
+        var windup = (int)Math.Ceiling(Math.Max(210, attackCooldown * 0.33));
         await Task.Delay(windup);
 
         moveCooldown -= windup;
@@ -79,7 +114,7 @@ while (true)
     {
         lastMove = DateTime.Now;
         sim.Mouse.RightButtonClick();
-        //sim.Keyboard.KeyPress(VirtualKeyCode.VK_A);
+        //serialPort.WriteLine("mouse:right");
 
         var postDelay = (int)Math.Ceiling(Math.Max(50, attackCooldown * 0.15));
         await Task.Delay(postDelay);

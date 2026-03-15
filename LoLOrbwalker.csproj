@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="InputSimulatorPlus" Version="1.0.7" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.5" />
     <PackageReference Include="Vanara.PInvoke.User32" Version="5.0.1" />
   </ItemGroup>
 

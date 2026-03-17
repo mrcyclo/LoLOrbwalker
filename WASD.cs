@@ -1,9 +1,6 @@
-﻿using SharpHook;
-using SharpHook.Data;
+﻿using System.IO.Ports;
 using System.Net.Http.Json;
 using System.Text;
-using WindowsInput;
-using WindowsInput.Native;
 using static Vanara.PInvoke.User32;
 
 namespace LoLOrbwalker
@@ -12,79 +9,55 @@ namespace LoLOrbwalker
     {
         private double attackSpeed = 1d;
         private bool isGameActive = false;
-        private bool isLeftMouseDown = false;
         private DateTime lastAttack = DateTime.Now;
-        private InputSimulator sim = new();
-        private TaskPoolGlobalHook hook = new();
-        private HashSet<KeyCode> physicalKeysDown = new HashSet<KeyCode>();
+        private SerialPort serial = new SerialPort("COM9")
+        {
+            BaudRate = 115200,
+        };
 
         public WASD()
         {
-            hook.KeyPressed += (s, e) => physicalKeysDown.Add(e.Data.KeyCode);
-            hook.KeyReleased += (s, e) => physicalKeysDown.Remove(e.Data.KeyCode);
-
-            hook.MousePressed += (s, e) =>
-            {
-                if (e.Data.Button != SharpHook.Data.MouseButton.Button1) return;
-                isLeftMouseDown = true;
-                Console.WriteLine("Active");
-            };
-
-            hook.MouseReleased += (s, e) =>
-            {
-                if (e.Data.Button != SharpHook.Data.MouseButton.Button1) return;
-                isLeftMouseDown = false;
-                Console.WriteLine("Deactive");
-            };
-
             Task.Run(GetAttackSpeedTask);
             Task.Run(CheckGameActiveTask);
             Task.Run(Loop);
-            Task.Run(() => hook.Run());
-        }
 
-        private List<VirtualKeyCode> GetActiveMoveKeys()
-        {
-            var list = new List<VirtualKeyCode>();
-            if (physicalKeysDown.Contains(KeyCode.VcW)) list.Add(VirtualKeyCode.VK_W);
-            if (physicalKeysDown.Contains(KeyCode.VcA)) list.Add(VirtualKeyCode.VK_A);
-            if (physicalKeysDown.Contains(KeyCode.VcS)) list.Add(VirtualKeyCode.VK_S);
-            if (physicalKeysDown.Contains(KeyCode.VcD)) list.Add(VirtualKeyCode.VK_D);
-            return list;
+            serial.Open();
         }
 
         private async Task Loop()
         {
             while (true)
             {
-                if (!isLeftMouseDown || !isGameActive)
+                if (!serial.IsOpen)
+                {
+                    await Task.Delay(10);
+                    continue;
+                }
+
+                var isSpaceDown = (GetAsyncKeyState(VK.VK_SPACE) & 0x8000) != 0;
+                if (!isSpaceDown || !isGameActive)
                 {
                     await Task.Delay(10);
                     continue;
                 }
 
                 var attackCooldown = 1000 / Math.Max(attackSpeed, 0.1);
-                var isAttackable = (DateTime.Now - lastAttack).TotalMilliseconds >= attackCooldown;
-                if (!isAttackable)
+                var canAttack = (DateTime.Now - lastAttack).TotalMilliseconds >= attackCooldown;
+                if (!canAttack)
                 {
                     await Task.Delay(10);
+                    continue;
                 }
+
+                serial.WriteLine("1");
+                serial.WriteLine("2");
 
                 lastAttack = DateTime.Now;
 
-                var keysToRestore = GetActiveMoveKeys();
-                foreach (var key in keysToRestore) sim.Keyboard.KeyUp(key);
-
-                sim.Mouse.LeftButtonDown();
-                await Task.Delay(50);
-                sim.Mouse.LeftButtonUp();
-
-                var windup = (int)Math.Ceiling(Math.Max(210, attackCooldown * 0.33));
+                var windup = (int)Math.Ceiling(Math.Max(150, attackCooldown * 0.33));
                 await Task.Delay(windup);
 
-                foreach (var key in keysToRestore) sim.Keyboard.KeyDown(key);
-
-                await Task.Delay(10);
+                serial.WriteLine("0");
             }
         }
 

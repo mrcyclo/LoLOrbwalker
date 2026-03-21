@@ -4,12 +4,14 @@
 #include <USB.h>
 #include <USBHIDKeyboard.h>
 #include <USBHIDMouse.h>
+#include <USBHIDConsumerControl.h>
 
 Adafruit_NeoPixel pixel(1, 48, NEO_GRB + NEO_KHZ800);
 
 USBCDC USBSerial;
 USBHIDKeyboard keyboard;
 USBHIDMouse mouse;
+USBHIDConsumerControl consumer;
 
 Preferences preferences;
 const char *preferencesName = "keyboard-data";
@@ -65,14 +67,25 @@ void notifyCallback(NimBLERemoteCharacteristic *pRemoteCharacteristic, uint8_t *
     }
     Serial.println();
 
-    if (length != sizeof(KeyReport))
+    if (length == sizeof(KeyReport))
     {
-        keyboard.sendReport((KeyReport *)pData);
+        memcpy(&lastRawReport, pData, sizeof(KeyReport));
+        sendFilteredReport();
         return;
     }
 
-    memcpy(&lastRawReport, pData, sizeof(KeyReport));
-    sendFilteredReport();
+    if (length == sizeof(uint16_t))
+    {
+        uint16_t mediaKey = pData[0] | (pData[1] << 8);
+        if (mediaKey != 0)
+        {
+            consumer.press(mediaKey);
+        }
+        else
+        {
+            consumer.release();
+        }
+    }
 }
 
 class ClientCallbacks : public NimBLEClientCallbacks
@@ -278,6 +291,7 @@ void setup()
     USB.begin();
     keyboard.begin();
     mouse.begin();
+    consumer.begin();
 
     Serial.println("Init NimBLEDevice");
     NimBLEDevice::init("WASD Kitting");

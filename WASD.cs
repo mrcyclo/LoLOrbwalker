@@ -2,7 +2,6 @@
 using System.IO.Ports;
 using System.Net.Http.Json;
 using System.Text;
-using static Vanara.PInvoke.LCID;
 using static Vanara.PInvoke.User32;
 
 namespace LoLOrbwalker
@@ -35,8 +34,6 @@ namespace LoLOrbwalker
         {
             while (true)
             {
-                Console.Write("\rSerial: " + serial?.PortName + " - Attack Speed: " + string.Format("{0:n2}", attackSpeed) + " - Left Mouse Down: " + leftMouseDownCount);
-
                 if (serial == null || !serial.IsOpen)
                 {
                     await Task.Delay(10);
@@ -95,7 +92,12 @@ namespace LoLOrbwalker
                     var player = await client.GetFromJsonAsync<ActivePlayer>("https://127.0.0.1:2999/liveclientdata/activeplayer");
                     if (player != null)
                     {
-                        attackSpeed = player.championStats.attackSpeed;
+                        var currentAttackSpeed = player.championStats.attackSpeed;
+                        if (currentAttackSpeed != attackSpeed)
+                        {
+                            Console.WriteLine("Attack Speed: " + currentAttackSpeed);
+                            attackSpeed = currentAttackSpeed;
+                        }
                     }
 
                     await Task.Delay(500);
@@ -122,7 +124,7 @@ namespace LoLOrbwalker
                 // Turn off cheat when change game focus
                 if (currentActive != isGameActive)
                 {
-                    serial.WriteLine("off");
+                    serial?.WriteLine("off");
                     isGameActive = currentActive;
                 }
 
@@ -140,6 +142,7 @@ namespace LoLOrbwalker
             serial = new SerialPort("COM9");
             serial.WriteTimeout = 1000;
             serial.Open();
+            Console.WriteLine(serial.PortName + " opened");
         }
     }
 }

@@ -123,6 +123,7 @@ namespace LoLOrbwalker
                 if (currentActive != isGameActive)
                 {
                     serial.WriteLine("off");
+                    isGameActive = currentActive;
                 }
 
                 await Task.Delay(1000);

@@ -279,6 +279,21 @@ String serialReadLine()
     return line;
 }
 
+bool isWASDPressed()
+{
+    bool isPressed = false;
+    for (int i = 0; i < 6; i++)
+    {
+        uint8_t k = lastRawReport.keys[i];
+        if (k == 0x1A || k == 0x04 || k == 0x16 || k == 0x07)
+        {
+            isPressed = true;
+            break;
+        }
+    }
+    return isPressed;
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -354,7 +369,7 @@ void loop()
         }
     }
 
-    if (line == "click")
+    if (line == "click" && isWASDPressed())
     {
         mouse.press(MOUSE_LEFT);
         delay(50);

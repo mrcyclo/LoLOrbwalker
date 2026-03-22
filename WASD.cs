@@ -2,6 +2,7 @@
 using System.IO.Ports;
 using System.Net.Http.Json;
 using System.Text;
+using WindowsInput;
 using static Vanara.PInvoke.User32;
 
 namespace LoLOrbwalker
@@ -12,8 +13,10 @@ namespace LoLOrbwalker
         private bool isGameActive = false;
         private DateTime lastAttack = DateTime.Now;
         private TaskPoolGlobalHook hook = new();
+        private InputSimulator sim = new();
         private SerialPort? serial = null;
         private int leftMouseDownCount = 0;
+        private bool showAttackRange = false;
 
         public WASD()
         {
@@ -36,6 +39,11 @@ namespace LoLOrbwalker
             {
                 if (serial == null || !serial.IsOpen)
                 {
+                    if (showAttackRange)
+                    {
+                        sim.Keyboard.KeyUp(WindowsInput.Native.VirtualKeyCode.VK_X);
+                    }
+
                     await Task.Delay(10);
                     continue;
                 }
@@ -43,9 +51,17 @@ namespace LoLOrbwalker
                 var isCheatActive = leftMouseDownCount > 0;
                 if (!isCheatActive || !isGameActive)
                 {
+                    if (showAttackRange)
+                    {
+                        sim.Keyboard.KeyUp(WindowsInput.Native.VirtualKeyCode.VK_X);
+                    }
+
                     await Task.Delay(10);
                     continue;
                 }
+
+                showAttackRange = true;
+                sim.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.VK_X);
 
                 var attackCooldown = 1000 / Math.Max(attackSpeed, 0.1);
                 var canAttack = (DateTime.Now - lastAttack).TotalMilliseconds >= attackCooldown + 75;
